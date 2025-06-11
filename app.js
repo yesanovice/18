@@ -1,365 +1,480 @@
-// Game state
-let gameState = {
-    playerCards: [],
-    computerCards: [],
-    playerScore: 0,
-    computerScore: 0,
-    currentRound: 1,
-    currentPhase: 1,
-    playerPhase1Card: null,
-    computerPhase1Card: null,
-    playerPhase2Card: null,
-    computerPhase2Card: null,
-    usedPlayerCards: [],
-    usedComputerCards: []
-};
-
-// DOM elements
-const playerScoreEl = document.getElementById('player-score');
-const computerScoreEl = document.getElementById('computer-score');
-const currentRoundEl = document.getElementById('current-round');
-const currentPhaseEl = document.getElementById('current-phase');
-const playerHandEl = document.getElementById('player-hand');
-const messageEl = document.getElementById('message');
-const nextBtn = document.getElementById('next-btn');
-const rulesBtn = document.getElementById('rules-btn');
-const rulesModal = document.getElementById('rules-modal');
-const gameEndModal = document.getElementById('game-end-modal');
-const gameEndTitle = document.getElementById('game-end-title');
-const gameEndMessage = document.getElementById('game-end-message');
-const playAgainBtn = document.getElementById('play-again-btn');
-const closeBtn = document.querySelector('.close');
-
-// Card elements
-const playerPhase1CardEl = document.getElementById('player-phase1-card');
-const playerPhase2CardEl = document.getElementById('player-phase2-card');
-const computerPhase1CardEl = document.getElementById('computer-phase1-card');
-const computerPhase2CardEl = document.getElementById('computer-phase2-card');
-
-// Initialize the game
-function initGame() {
-    // Reset game state
-    gameState = {
-        playerCards: [],
-        computerCards: [],
-        playerScore: 0,
-        computerScore: 0,
-        currentRound: 1,
-        currentPhase: 1,
-        playerPhase1Card: null,
-        computerPhase1Card: null,
-        playerPhase2Card: null,
-        computerPhase2Card: null,
-        usedPlayerCards: [],
-        usedComputerCards: []
-    };
-
-    // Create two sets of 1-9 cards for each player
-    for (let i = 0; i < 2; i++) {
-        for (let j = 1; j <= 9; j++) {
-            gameState.playerCards.push(j);
-            gameState.computerCards.push(j);
+class Game {
+  constructor() {
+    this.playerCards = [];
+    this.computerCards = [];
+    this.playerScore = 0;
+    this.computerScore = 0;
+    this.round = 1;
+    this.phase = 1;
+    this.selectedCard = null;
+    this.playerPhase1Card = null;
+    this.playerPhase2Card = null;
+    this.computerPhase1Card = null;
+    this.computerPhase2Card = null;
+    this.ai = new EnhancedAIPlayer();
+    
+    this.initElements();
+    this.initEventListeners();
+    this.newGame();
+  }
+  
+  initElements() {
+    this.playerCardsElement = document.getElementById('player-cards');
+    this.playerScoreElement = document.getElementById('player-score');
+    this.computerScoreElement = document.getElementById('computer-score');
+    this.roundNumberElement = document.getElementById('round-number');
+    this.playButton = document.getElementById('play-btn');
+    this.nextRoundButton = document.getElementById('next-round-btn');
+    this.newGameButton = document.getElementById('new-game-btn');
+    this.resultModal = document.getElementById('result-modal');
+    this.resultTitle = document.getElementById('result-title');
+    this.resultMessage = document.getElementById('result-message');
+    this.modalCloseButton = document.getElementById('modal-close-btn');
+    this.playerPhase1Element = document.getElementById('player-phase1');
+    this.playerPhase2Element = document.getElementById('player-phase2');
+    this.computerPhase1Element = document.getElementById('computer-phase1-revealed');
+    this.computerPhase2Element = document.getElementById('computer-phase2-revealed');
+    this.computerHiddenPhase1 = document.getElementById('computer-phase1');
+    this.computerHiddenPhase2 = document.getElementById('computer-phase2');
+    this.playerSumElement = document.getElementById('player-sum');
+    this.computerSumElement = document.getElementById('computer-sum');
+  }
+  
+  initEventListeners() {
+    this.playButton.addEventListener('click', () => this.playCard());
+    this.nextRoundButton.addEventListener('click', () => this.nextRound());
+    this.newGameButton.addEventListener('click', () => this.newGame());
+    this.modalCloseButton.addEventListener('click', () => this.closeModal());
+    
+    // Card selection
+    this.playerCardsElement.addEventListener('click', (e) => {
+      if (e.target.classList.contains('card') && !e.target.classList.contains('empty')) {
+        this.selectCard(parseInt(e.target.textContent));
+      }
+    });
+  }
+  
+  newGame() {
+    this.playerScore = 0;
+    this.computerScore = 0;
+    this.round = 1;
+    this.phase = 1;
+    this.updateScoreboard();
+    this.closeModal();
+    this.resetRound();
+    this.dealCards();
+  }
+  
+  dealCards() {
+    // Create two sets of 1-9 cards
+    this.playerCards = [1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9];
+    this.computerCards = [1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9];
+    
+    // Initialize AI
+    this.ai = new EnhancedAIPlayer();
+    
+    this.renderPlayerCards();
+    this.resetPlayArea();
+    this.updateControls();
+  }
+  
+  renderPlayerCards() {
+    this.playerCardsElement.innerHTML = '';
+    
+    // Sort cards for better visibility
+    const sortedCards = [...this.playerCards].sort((a, b) => a - b);
+    
+    sortedCards.forEach(card => {
+      const cardElement = document.createElement('div');
+      cardElement.className = 'card';
+      cardElement.textContent = card;
+      this.playerCardsElement.appendChild(cardElement);
+    });
+  }
+  
+  selectCard(cardValue) {
+    // Only allow selection if we're in card selection phase
+    if (this.phase !== 1 && this.phase !== 2) return;
+    
+    // Deselect previous selection
+    if (this.selectedCard !== null) {
+      const cards = document.querySelectorAll('.player-cards .card');
+      cards.forEach(card => {
+        if (parseInt(card.textContent) === this.selectedCard) {
+          card.classList.remove('selected');
         }
+      });
     }
-
-    // Shuffle the cards
-    shuffleArray(gameState.playerCards);
-    shuffleArray(gameState.computerCards);
-
+    
+    // Select new card
+    this.selectedCard = cardValue;
+    const cards = document.querySelectorAll('.player-cards .card');
+    cards.forEach(card => {
+      if (parseInt(card.textContent) === cardValue) {
+        card.classList.add('selected');
+      }
+    });
+    
+    this.playButton.disabled = false;
+  }
+  
+  playCard() {
+    if (this.selectedCard === null) return;
+    
+    if (this.phase === 1) {
+      this.playPhase1();
+    } else if (this.phase === 2) {
+      this.playPhase2();
+    }
+  }
+  
+  playPhase1() {
+    // Player plays first card
+    this.playerPhase1Card = this.selectedCard;
+    this.playerCards = this.playerCards.filter(c => c !== this.selectedCard || 
+      (this.playerCards.indexOf(this.selectedCard) !== this.playerCards.lastIndexOf(this.selectedCard) && 
+      this.playerCards.lastIndexOf(this.selectedCard) === this.playerCards.indexOf(c)));
+    
+    // Computer plays first card
+    this.computerPhase1Card = this.ai.playFirstCard();
+    
     // Update UI
-    updateUI();
-    renderPlayerHand();
-    messageEl.textContent = "Select a card to play (Phase 1)";
-    nextBtn.classList.add('hidden');
-}
-
-// Shuffle array function
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-    }
-}
-
-// Render player's hand
-function renderPlayerHand() {
-    playerHandEl.innerHTML = '';
-    const availableCards = getAvailablePlayerCards();
+    this.playerPhase1Element.textContent = this.playerPhase1Card;
+    this.playerPhase1Element.className = 'card';
+    this.computerHiddenPhase1.textContent = '?';
+    this.computerPhase1Element.textContent = this.computerPhase1Card;
     
-    availableCards.forEach(card => {
-        const cardEl = document.createElement('div');
-        cardEl.className = 'card';
-        cardEl.textContent = card;
-        cardEl.addEventListener('click', () => playCard(card));
-        playerHandEl.appendChild(cardEl);
-    });
-}
-
-// Get available player cards
-function getAvailablePlayerCards() {
-    const allCards = [...gameState.playerCards];
-    const usedCards = [...gameState.usedPlayerCards];
+    // Move to phase 2
+    this.phase = 2;
+    this.selectedCard = null;
+    this.renderPlayerCards();
+    this.updateControls();
+  }
+  
+  playPhase2() {
+    // Player plays second card
+    this.playerPhase2Card = this.selectedCard;
+    this.playerCards = this.playerCards.filter(c => c !== this.selectedCard || 
+      (this.playerCards.indexOf(this.selectedCard) !== this.playerCards.lastIndexOf(this.selectedCard) && 
+      this.playerCards.lastIndexOf(this.selectedCard) === this.playerCards.indexOf(c)));
     
-    // Create a frequency map of used cards
-    const usedCount = {};
-    usedCards.forEach(card => {
-        usedCount[card] = (usedCount[card] || 0) + 1;
-    });
+    // Computer plays second card
+    this.computerPhase2Card = this.ai.playSecondCard(this.playerPhase1Card, this.computerPhase1Card);
     
-    // Create a frequency map of all cards
-    const allCount = {};
-    allCards.forEach(card => {
-        allCount[card] = (allCount[card] || 0) + 1;
-    });
+    // Update UI
+    this.playerPhase2Element.textContent = this.playerPhase2Card;
+    this.playerPhase2Element.className = 'card';
+    this.computerHiddenPhase2.textContent = '?';
+    this.computerPhase2Element.textContent = this.computerPhase2Card;
     
-    // Calculate available cards
-    const availableCards = [];
-    for (let card in allCount) {
-        const available = allCount[card] - (usedCount[card] || 0);
-        for (let i = 0; i < available; i++) {
-            availableCards.push(parseInt(card));
-        }
-    }
+    // Record played cards for AI
+    this.ai.recordPlayedCards(this.playerPhase1Card, this.computerPhase1Card);
+    this.ai.recordPlayedCards(this.playerPhase2Card, this.computerPhase2Card);
     
-    return availableCards;
-}
-
-// Play a card
-function playCard(card) {
-    if (gameState.currentPhase === 1) {
-        gameState.playerPhase1Card = card;
-        gameState.usedPlayerCards.push(card);
-        
-        // Computer plays phase 1 card
-        const computerCard = computerPlayPhase1();
-        gameState.computerPhase1Card = computerCard;
-        gameState.usedComputerCards.push(computerCard);
-        
-        // Reveal phase 1 cards
-        revealPhase1Cards();
-        
-        // Update UI
-        updateUI();
-        messageEl.textContent = `Phase 1: You played ${card}, Computer played ${computerCard}`;
-        nextBtn.classList.remove('hidden');
-    } else if (gameState.currentPhase === 2) {
-        gameState.playerPhase2Card = card;
-        gameState.usedPlayerCards.push(card);
-        
-        // Computer plays phase 2 card
-        const computerCard = computerPlayPhase2();
-        gameState.computerPhase2Card = computerCard;
-        gameState.usedComputerCards.push(computerCard);
-        
-        // Reveal phase 2 cards and determine round winner
-        revealPhase2Cards();
-        
-        // Update UI
-        updateUI();
-        
-        const playerSum = gameState.playerPhase1Card + gameState.playerPhase2Card;
-        const computerSum = gameState.computerPhase1Card + gameState.computerPhase2Card;
-        
-        if (playerSum > computerSum) {
-            gameState.playerScore++;
-            messageEl.textContent = `You won the round! (${playerSum} vs ${computerSum})`;
-        } else if (computerSum > playerSum) {
-            gameState.computerScore++;
-            messageEl.textContent = `Computer won the round! (${computerSum} vs ${playerSum})`;
-        } else {
-            messageEl.textContent = `Round tied! (${playerSum} vs ${computerSum})`;
-        }
-        
-        // Check if game is over
-        if (gameState.playerScore >= 5 || gameState.computerScore >= 5 || gameState.currentRound >= 9) {
-            endGame();
-        } else {
-            nextBtn.textContent = "Next Round";
-            nextBtn.classList.remove('hidden');
-        }
-    }
-}
-
-// Computer AI for phase 1
-function computerPlayPhase1() {
-    const availableCards = getAvailableComputerCards();
+    // Calculate sums
+    const playerSum = this.playerPhase1Card + this.playerPhase2Card;
+    const computerSum = this.computerPhase1Card + this.computerPhase2Card;
     
-    // Simple strategy: play a medium card in phase 1
-    // Sort available cards and pick one around the middle
-    availableCards.sort((a, b) => a - b);
-    const middleIndex = Math.floor(availableCards.length / 2);
-    return availableCards[middleIndex];
-}
-
-// Computer AI for phase 2
-function computerPlayPhase2() {
-    const availableCards = getAvailableComputerCards();
+    // Update sum display
+    this.playerSumElement.textContent = playerSum;
+    this.computerSumElement.textContent = computerSum;
     
-    // Get current sums
-    const playerPhase1 = gameState.playerPhase1Card;
-    const computerPhase1 = gameState.computerPhase1Card;
-    const currentDiff = playerPhase1 - computerPhase1;
-    
-    // Strategy:
-    // If computer is ahead after phase 1, play conservatively (lower card)
-    // If computer is behind after phase 1, play aggressively (higher card)
-    // If tied, play a medium card
-    
-    availableCards.sort((a, b) => a - b);
-    
-    if (currentDiff < 0) { // Computer is ahead
-        // Play a lower card (first half of sorted available cards)
-        const playIndex = Math.floor(Math.random() * Math.floor(availableCards.length / 2));
-        return availableCards[playIndex];
-    } else if (currentDiff > 0) { // Computer is behind
-        // Play a higher card (second half of sorted available cards)
-        const playIndex = Math.floor(availableCards.length / 2 + Math.random() * Math.ceil(availableCards.length / 2));
-        return availableCards[Math.min(playIndex, availableCards.length - 1)];
-    } else { // Tied
-        // Play a medium card
-        const middleIndex = Math.floor(availableCards.length / 2);
-        return availableCards[middleIndex];
-    }
-}
-
-// Get available computer cards
-function getAvailableComputerCards() {
-    const allCards = [...gameState.computerCards];
-    const usedCards = [...gameState.usedComputerCards];
-    
-    // Create a frequency map of used cards
-    const usedCount = {};
-    usedCards.forEach(card => {
-        usedCount[card] = (usedCount[card] || 0) + 1;
-    });
-    
-    // Create a frequency map of all cards
-    const allCount = {};
-    allCards.forEach(card => {
-        allCount[card] = (allCount[card] || 0) + 1;
-    });
-    
-    // Calculate available cards
-    const availableCards = [];
-    for (let card in allCount) {
-        const available = allCount[card] - (usedCount[card] || 0);
-        for (let i = 0; i < available; i++) {
-            availableCards.push(parseInt(card));
-        }
-    }
-    
-    return availableCards;
-}
-
-// Reveal phase 1 cards
-function revealPhase1Cards() {
-    playerPhase1CardEl.textContent = gameState.playerPhase1Card;
-    playerPhase1CardEl.classList.remove('hidden');
-    
-    computerPhase1CardEl.textContent = gameState.computerPhase1Card;
-    computerPhase1CardEl.classList.remove('hidden');
-}
-
-// Reveal phase 2 cards
-function revealPhase2Cards() {
-    playerPhase2CardEl.textContent = gameState.playerPhase2Card;
-    playerPhase2CardEl.classList.remove('hidden');
-    
-    computerPhase2CardEl.textContent = gameState.computerPhase2Card;
-    computerPhase2CardEl.classList.remove('hidden');
-}
-
-// Update UI
-function updateUI() {
-    playerScoreEl.textContent = gameState.playerScore;
-    computerScoreEl.textContent = gameState.computerScore;
-    currentRoundEl.textContent = gameState.currentRound;
-    currentPhaseEl.textContent = gameState.currentPhase;
-}
-
-// Next button handler
-function handleNext() {
-    if (gameState.currentPhase === 1) {
-        gameState.currentPhase = 2;
-        updateUI();
-        renderPlayerHand();
-        messageEl.textContent = "Select a card to play (Phase 2)";
-        nextBtn.classList.add('hidden');
-    } else if (gameState.currentPhase === 2) {
-        // Move to next round
-        gameState.currentRound++;
-        gameState.currentPhase = 1;
-        gameState.playerPhase1Card = null;
-        gameState.computerPhase1Card = null;
-        gameState.playerPhase2Card = null;
-        gameState.computerPhase2Card = null;
-        
-        // Reset card displays
-        playerPhase1CardEl.textContent = '?';
-        playerPhase1CardEl.classList.add('hidden');
-        playerPhase2CardEl.textContent = '?';
-        playerPhase2CardEl.classList.add('hidden');
-        computerPhase1CardEl.textContent = '?';
-        computerPhase1CardEl.classList.add('hidden');
-        computerPhase2CardEl.textContent = '?';
-        computerPhase2CardEl.classList.add('hidden');
-        
-        updateUI();
-        renderPlayerHand();
-        messageEl.textContent = "Select a card to play (Phase 1)";
-        nextBtn.classList.add('hidden');
-    }
-}
-
-// End game
-function endGame() {
-    if (gameState.playerScore > gameState.computerScore) {
-        gameEndTitle.textContent = "You Win!";
-        gameEndMessage.textContent = `Congratulations! You won the game ${gameState.playerScore}-${gameState.computerScore}`;
-    } else if (gameState.computerScore > gameState.playerScore) {
-        gameEndTitle.textContent = "Computer Wins!";
-        gameEndMessage.textContent = `The computer won the game ${gameState.computerScore}-${gameState.playerScore}. Better luck next time!`;
+    // Determine round winner
+    let roundWinner = null;
+    if (playerSum > computerSum) {
+      roundWinner = 'player';
+      this.playerScore++;
+    } else if (computerSum > playerSum) {
+      roundWinner = 'computer';
+      this.computerScore++;
     } else {
-        gameEndTitle.textContent = "Game Tied!";
-        gameEndMessage.textContent = `The game ended in a tie ${gameState.playerScore}-${gameState.computerScore}`;
+      roundWinner = 'tie';
     }
     
-    gameEndModal.style.display = "block";
+    // Update AI score
+    this.ai.updateScores(roundWinner === 'computer');
+    
+    // Show result
+    this.showResult(roundWinner, playerSum, computerSum);
+    
+    // Update controls for next round
+    this.phase = 3; // Waiting for next round
+    this.selectedCard = null;
+    this.updateControls();
+  }
+  
+  showResult(winner, playerSum, computerSum) {
+    this.resultModal.style.display = 'flex';
+    
+    if (winner === 'player') {
+      this.resultTitle.textContent = 'You Won the Round!';
+      this.resultTitle.className = 'win';
+      this.resultMessage.textContent = `Your sum: ${playerSum} vs Computer sum: ${computerSum}`;
+      this.resultMessage.className = 'win';
+    } else if (winner === 'computer') {
+      this.resultTitle.textContent = 'Computer Won the Round';
+      this.resultTitle.className = 'lose';
+      this.resultMessage.textContent = `Your sum: ${playerSum} vs Computer sum: ${computerSum}`;
+      this.resultMessage.className = 'lose';
+    } else {
+      this.resultTitle.textContent = 'Round Tied';
+      this.resultTitle.className = 'tie';
+      this.resultMessage.textContent = `Both sums: ${playerSum}`;
+      this.resultMessage.className = 'tie';
+    }
+    
+    // Check for game over
+    if (this.playerScore >= 5 || this.computerScore >= 5 || this.round >= 9) {
+      this.showGameOver();
+    }
+  }
+  
+  showGameOver() {
+    if (this.playerScore > this.computerScore) {
+      this.resultTitle.textContent = 'You Won the Game!';
+      this.resultMessage.textContent = `Final Score: You ${this.playerScore} - ${this.computerScore} Computer`;
+    } else if (this.computerScore > this.playerScore) {
+      this.resultTitle.textContent = 'Computer Won the Game';
+      this.resultMessage.textContent = `Final Score: Computer ${this.computerScore} - ${this.playerScore} You`;
+    } else {
+      this.resultTitle.textContent = 'Game Tied';
+      this.resultMessage.textContent = `Final Score: ${this.playerScore}-${this.computerScore}`;
+    }
+  }
+  
+  closeModal() {
+    this.resultModal.style.display = 'none';
+  }
+  
+  nextRound() {
+    this.round++;
+    if (this.round <= 9) {
+      this.resetRound();
+      this.updateScoreboard();
+      this.updateControls();
+    } else {
+      this.newGame();
+    }
+  }
+  
+  resetRound() {
+    this.phase = 1;
+    this.selectedCard = null;
+    this.playerPhase1Card = null;
+    this.playerPhase2Card = null;
+    this.computerPhase1Card = null;
+    this.computerPhase2Card = null;
+    
+    this.resetPlayArea();
+    this.renderPlayerCards();
+  }
+  
+  resetPlayArea() {
+    this.playerPhase1Element.textContent = '';
+    this.playerPhase1Element.className = 'card empty';
+    this.playerPhase2Element.textContent = '';
+    this.playerPhase2Element.className = 'card empty';
+    this.computerPhase1Element.textContent = '';
+    this.computerPhase1Element.className = 'card empty';
+    this.computerPhase2Element.textContent = '';
+    this.computerPhase2Element.className = 'card empty';
+    this.computerHiddenPhase1.textContent = '?';
+    this.computerHiddenPhase1.className = 'card back';
+    this.computerHiddenPhase2.textContent = '?';
+    this.computerHiddenPhase2.className = 'card back';
+    this.playerSumElement.textContent = '0';
+    this.computerSumElement.textContent = '0';
+  }
+  
+  updateScoreboard() {
+    this.playerScoreElement.textContent = this.playerScore;
+    this.computerScoreElement.textContent = this.computerScore;
+    this.roundNumberElement.textContent = `${this.round}/9`;
+  }
+  
+  updateControls() {
+    this.playButton.disabled = this.phase === 3 || this.selectedCard === null;
+    this.nextRoundButton.disabled = this.phase !== 3;
+  }
 }
 
-// Event listeners
-nextBtn.addEventListener('click', handleNext);
-rulesBtn.addEventListener('click', () => {
-    rulesModal.style.display = "block";
-});
-closeBtn.addEventListener('click', () => {
-    rulesModal.style.display = "none";
-});
-playAgainBtn.addEventListener('click', () => {
-    gameEndModal.style.display = "none";
-    initGame();
+// Initialize the game when the page loads
+window.addEventListener('DOMContentLoaded', () => {
+  const game = new Game();
 });
 
-// Close modals when clicking outside
-window.addEventListener('click', (event) => {
-    if (event.target === rulesModal) {
-        rulesModal.style.display = "none";
-    }
-    if (event.target === gameEndModal) {
-        gameEndModal.style.display = "none";
-    }
-});
+// Include the AI classes here (from previous response)
+class EnhancedAIPlayer {
+  constructor() {
+    this.remainingCards = [1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9];
+    this.usedCards = [];
+    this.opponentModel = {
+      remaining: [1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9],
+      used: []
+    };
+    this.roundNumber = 0;
+    this.aiScore = 0;
+    this.playerScore = 0;
+  }
 
-// PWA setup
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').then(registration => {
-            console.log('ServiceWorker registration successful');
-        }).catch(err => {
-            console.log('ServiceWorker registration failed: ', err);
-        });
+  updateScores(aiWon) {
+    if (aiWon) this.aiScore++;
+    else this.playerScore++;
+    this.roundNumber++;
+  }
+
+  recordPlayedCards(playerCard, aiCard) {
+    this.opponentModel.used.push(playerCard);
+    const index = this.opponentModel.remaining.indexOf(playerCard);
+    if (index !== -1) {
+      this.opponentModel.remaining.splice(index, 1);
+    }
+    
+    // Also track AI's own cards
+    const aiIndex = this.remainingCards.indexOf(aiCard);
+    if (aiIndex !== -1) {
+      this.remainingCards.splice(aiIndex, 1);
+      this.usedCards.push(aiCard);
+    }
+  }
+
+  playFirstCard() {
+    const roundImportance = this.calculateRoundImportance();
+    const remainingCards = [...this.remainingCards];
+    
+    // Early game: play mid-range cards
+    if (this.roundNumber < 3) {
+      const midCards = remainingCards.filter(c => c >= 3 && c <= 7);
+      if (midCards.length > 0) {
+        return this.playCard(this.selectRandomCard(midCards));
+      }
+    }
+    
+    // Mid/late game: adjust based on score
+    if (roundImportance > 0.7) {
+      // Important round - play stronger card
+      const strongCards = remainingCards.filter(c => c >= 6);
+      if (strongCards.length > 0) {
+        return this.playCard(this.selectRandomCard(strongCards));
+      }
+    } else {
+      // Less important - conserve high cards
+      const lowMidCards = remainingCards.filter(c => c <= 5);
+      if (lowMidCards.length > 0) {
+        return this.playCard(this.selectRandomCard(lowMidCards));
+      }
+    }
+    
+    // Fallback
+    return this.playCard(this.selectRandomCard(remainingCards));
+  }
+
+  playSecondCard(playerFirstCard, aiFirstCard) {
+    this.recordPlayedCards(playerFirstCard, aiFirstCard);
+    const currentSum = playerFirstCard + aiFirstCard;
+    const remainingCards = [...this.remainingCards];
+    const roundImportance = this.calculateRoundImportance();
+    
+    // Estimate opponent's likely second card
+    const opponentCards = this.opponentModel.remaining;
+    const opponentAvg = opponentCards.reduce((a, b) => a + b, 0) / opponentCards.length || 5;
+    
+    // Calculate needed sum to win
+    const neededSum = currentSum + (opponentAvg + 0.5); // slight bias
+    
+    // Evaluate each possible card
+    const cardEvaluations = remainingCards.map(card => {
+      const projectedSum = currentSum + card;
+      const winProbability = this.calculateWinProbability(projectedSum, opponentCards);
+      
+      // Score based on win probability and card value conservation
+      let score = winProbability * 100;
+      
+      // Penalize using high cards unnecessarily
+      if (winProbability < 0.5 && card >= 7) {
+        score -= (card * 2);
+      }
+      
+      // Bonus for using low cards when likely to lose anyway
+      if (winProbability < 0.3 && card <= 3) {
+        score += (4 - card) * 10;
+      }
+      
+      return { card, score };
     });
-}
+    
+    // Sort by best score
+    cardEvaluations.sort((a, b) => b.score - a.score);
+    
+    // Occasionally bluff in important rounds
+    if (roundImportance > 0.8 && Math.random() < 0.3) {
+      const bluffCard = this.selectBluffCard(remainingCards, cardEvaluations);
+      if (bluffCard) {
+        return this.playCard(bluffCard);
+      }
+    }
+    
+    // Play best card
+    return this.playCard(cardEvaluations[0].card);
+  }
 
-// Initialize the game
-initGame();
+  calculateRoundImportance() {
+    const roundsLeft = 9 - this.roundNumber;
+    const diff = Math.abs(this.aiScore - this.playerScore);
+    
+    if (roundsLeft === 0) return 1;
+    if (diff >= roundsLeft + 1) return 0.2; // match already decided
+    
+    // Calculate how critical this round is
+    const importance = 0.5 + (diff / roundsLeft) * 0.5;
+    return Math.min(1, Math.max(0.2, importance));
+  }
+
+  calculateWinProbability(projectedSum, opponentCards) {
+    if (opponentCards.length === 0) return 0.5;
+    
+    let wins = 0;
+    const possibleSums = opponentCards.map(oppCard => projectedSum - oppCard);
+    
+    // Count how many would result in AI win
+    wins = possibleSums.filter(sum => sum > 0).length;
+    
+    // Add partial credit for ties
+    const ties = possibleSums.filter(sum => sum === 0).length;
+    
+    return (wins + ties * 0.5) / possibleSums.length;
+  }
+
+  selectBluffCard(remainingCards, evaluations) {
+    // Try to find a card that's not the obvious best play
+    if (evaluations.length > 1) {
+      // Prefer a mid-range card that's not the top evaluation
+      const midCards = remainingCards.filter(c => c >= 3 && c <= 7);
+      const nonTopMidCards = midCards.filter(c => c !== evaluations[0].card);
+      
+      if (nonTopMidCards.length > 0) {
+        return this.selectRandomCard(nonTopMidCards);
+      }
+    }
+    return null;
+  }
+
+  selectRandomCard(cardArray) {
+    if (cardArray.length === 0) return 5; // fallback
+    return cardArray[Math.floor(Math.random() * cardArray.length)];
+  }
+
+  playCard(cardValue) {
+    const index = this.remainingCards.indexOf(cardValue);
+    if (index !== -1) {
+      this.remainingCards.splice(index, 1);
+      this.usedCards.push(cardValue);
+      return cardValue;
+    }
+    return this.playRandomCard();
+  }
+
+  playRandomCard() {
+    return this.playCard(this.selectRandomCard(this.remainingCards));
+  }
+}
