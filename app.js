@@ -131,9 +131,12 @@ class Game {
   playPhase1() {
     // Player plays first card
     this.playerPhase1Card = this.selectedCard;
-    this.playerCards = this.playerCards.filter(c => c !== this.selectedCard || 
-      (this.playerCards.indexOf(this.selectedCard) !== this.playerCards.lastIndexOf(this.selectedCard) && 
-      this.playerCards.lastIndexOf(this.selectedCard) === this.playerCards.indexOf(c)));
+    
+    // Remove only one instance of the selected card
+    const cardIndex = this.playerCards.indexOf(this.selectedCard);
+    if (cardIndex !== -1) {
+      this.playerCards.splice(cardIndex, 1);
+    }
     
     // Computer plays first card
     this.computerPhase1Card = this.ai.playFirstCard();
@@ -154,9 +157,12 @@ class Game {
   playPhase2() {
     // Player plays second card
     this.playerPhase2Card = this.selectedCard;
-    this.playerCards = this.playerCards.filter(c => c !== this.selectedCard || 
-      (this.playerCards.indexOf(this.selectedCard) !== this.playerCards.lastIndexOf(this.selectedCard) && 
-      this.playerCards.lastIndexOf(this.selectedCard) === this.playerCards.indexOf(c)));
+    
+    // Remove only one instance of the selected card
+    const cardIndex = this.playerCards.indexOf(this.selectedCard);
+    if (cardIndex !== -1) {
+      this.playerCards.splice(cardIndex, 1);
+    }
     
     // Computer plays second card
     this.computerPhase2Card = this.ai.playSecondCard(this.playerPhase1Card, this.computerPhase1Card);
@@ -298,12 +304,6 @@ class Game {
   }
 }
 
-// Initialize the game when the page loads
-window.addEventListener('DOMContentLoaded', () => {
-  const game = new Game();
-});
-
-// Include the AI classes here (from previous response)
 class EnhancedAIPlayer {
   constructor() {
     this.remainingCards = [1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9];
@@ -478,3 +478,8 @@ class EnhancedAIPlayer {
     return this.playCard(this.selectRandomCard(this.remainingCards));
   }
 }
+
+// Initialize the game when the page loads
+window.addEventListener('DOMContentLoaded', () => {
+  const game = new Game();
+});
