@@ -61,7 +61,7 @@ class Game {
     
     this.playerCardsElement.addEventListener('click', (e) => {
       if (e.target.classList.contains('card') && !e.target.classList.contains('empty')) {
-        this.selectCard(parseInt(e.target.textContent));
+        this.selectCard(parseInt(e.target.dataset.value));
       }
     });
   }
@@ -125,7 +125,7 @@ class Game {
       const cardElement = document.createElement('div');
       cardElement.className = 'card';
       cardElement.textContent = card;
-      cardElement.setAttribute('data-value', card);
+      cardElement.dataset.value = card;
       this.playerCardsElement.appendChild(cardElement);
     });
   }
@@ -133,24 +133,20 @@ class Game {
   selectCard(cardValue) {
     if (this.phase !== 1 && this.phase !== 2 || this.gameCompleted) return;
     
-    if (this.selectedCard !== null) {
-      const cards = document.querySelectorAll('.player-cards .card');
-      cards.forEach(card => {
-        if (parseInt(card.textContent) === this.selectedCard) {
-          card.classList.remove('selected');
-        }
-      });
-    }
-    
-    this.selectedCard = cardValue;
+    // Remove selection from all cards
     const cards = document.querySelectorAll('.player-cards .card');
-    cards.forEach(card => {
-      if (parseInt(card.textContent) === cardValue) {
-        card.classList.add('selected');
-      }
-    });
+    cards.forEach(card => card.classList.remove('selected'));
     
-    this.updateControls();
+    // Find and select the clicked card
+    const selectedCardElement = Array.from(cards).find(
+      card => parseInt(card.dataset.value) === cardValue
+    );
+    
+    if (selectedCardElement) {
+      selectedCardElement.classList.add('selected');
+      this.selectedCard = cardValue;
+      this.playButton.disabled = false;
+    }
   }
   
   playCard() {
