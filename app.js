@@ -150,7 +150,7 @@ class Game {
       }
     });
     
-    this.playButton.disabled = false;
+    this.updateControls();
   }
   
   playCard() {
@@ -269,7 +269,6 @@ class Game {
       this.resultMessage.className = 'tie';
     }
 
-    // Check if match is won (5 rounds) but don't stop the game
     if (this.playerScore >= 5 || this.computerScore >= 5) {
       this.gameCompleted = true;
       this.showGameOver();
@@ -308,7 +307,6 @@ class Game {
       this.updateScoreboard();
       this.updateControls();
     } else {
-      // If all 9 rounds completed without reaching 5 wins
       if (!this.gameCompleted) {
         this.gameCompleted = true;
         this.showGameOver();
@@ -325,6 +323,11 @@ class Game {
     this.playerPhase2Card = null;
     this.computerPhase1Card = null;
     this.computerPhase2Card = null;
+    
+    // Clear any selected card UI
+    const cards = document.querySelectorAll('.player-cards .card');
+    cards.forEach(card => card.classList.remove('selected'));
+    
     this.resetPlayArea();
     this.renderPlayerCards();
   }
@@ -353,8 +356,18 @@ class Game {
   }
   
   updateControls() {
-    this.playButton.disabled = (this.phase === 3 || this.selectedCard === null) || this.gameCompleted;
-    this.nextRoundButton.disabled = (this.phase !== 3) || this.gameCompleted;
+    // Enable play button only if:
+    // - Game is not completed
+    // - We're in phase 1 or 2
+    // - A card is selected (for phases 1 and 2)
+    this.playButton.disabled = this.gameCompleted || 
+                             (this.phase !== 1 && this.phase !== 2) || 
+                             this.selectedCard === null;
+    
+    // Enable next round button only if:
+    // - We're in phase 3 (round completed)
+    // - Game is not completed
+    this.nextRoundButton.disabled = this.phase !== 3 || this.gameCompleted;
   }
 }
 
