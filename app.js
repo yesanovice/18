@@ -12,6 +12,8 @@ class Game {
     this.computerPhase1Card = null;
     this.computerPhase2Card = null;
     this.ai = new EnhancedAIPlayer();
+    this.soundEnabled = true;
+    this.gameCompleted = false;
     
     this.initElements();
     this.initEventListeners();
@@ -38,6 +40,14 @@ class Game {
     this.computerHiddenPhase2 = document.getElementById('computer-phase2');
     this.playerSumElement = document.getElementById('player-sum');
     this.computerSumElement = document.getElementById('computer-sum');
+    this.rulesModal = document.getElementById('rules-modal');
+    this.rulesButton = document.getElementById('rules-btn');
+    this.rulesCloseButton = document.getElementById('rules-close-btn');
+    this.soundButton = document.getElementById('sound-btn');
+    this.cardPlaySound = document.getElementById('card-play-sound');
+    this.winSound = document.getElementById('win-sound');
+    this.loseSound = document.getElementById('lose-sound');
+    this.tieSound = document.getElementById('tie-sound');
   }
   
   initEventListeners() {
@@ -45,6 +55,9 @@ class Game {
     this.nextRoundButton.addEventListener('click', () => this.nextRound());
     this.newGameButton.addEventListener('click', () => this.newGame());
     this.modalCloseButton.addEventListener('click', () => this.closeModal());
+    this.rulesButton.addEventListener('click', () => this.showRules());
+    this.rulesCloseButton.addEventListener('click', () => this.closeRules());
+    this.soundButton.addEventListener('click', () => this.toggleSound());
     
     // Card selection
     this.playerCardsElement.addEventListener('click', (e) => {
@@ -54,11 +67,43 @@ class Game {
     });
   }
   
+  toggleSound() {
+    this.soundEnabled = !this.soundEnabled;
+    this.soundButton.innerHTML = this.soundEnabled ? 
+      `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+      </svg>` :
+      `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+        <line x1="23" y1="9" x2="17" y2="15"></line>
+        <line x1="17" y1="9" x2="23" y2="15"></line>
+      </svg>`;
+    
+    this.soundButton.setAttribute('title', this.soundEnabled ? 'Sound On' : 'Sound Off');
+  }
+  
+  playSound(sound) {
+    if (!this.soundEnabled) return;
+    
+    sound.currentTime = 0;
+    sound.play().catch(e => console.log("Audio play failed:", e));
+  }
+  
+  showRules() {
+    this.rulesModal.style.display = 'flex';
+  }
+  
+  closeRules() {
+    this.rulesModal.style.display = 'none';
+  }
+  
   newGame() {
     this.playerScore = 0;
     this.computerScore = 0;
     this.round = 1;
     this.phase = 1;
+    this.gameCompleted = false;
     this.updateScoreboard();
     this.closeModal();
     this.resetRound();
@@ -88,13 +133,14 @@ class Game {
       const cardElement = document.createElement('div');
       cardElement.className = 'card';
       cardElement.textContent = card;
+      cardElement.setAttribute('data-value', card);
       this.playerCardsElement.appendChild(cardElement);
     });
   }
   
   selectCard(cardValue) {
-    // Only allow selection if we're in card selection phase
-    if (this.phase !== 1 && this.phase !== 2) return;
+    // Only allow selection if we're in card selection phase and game isn't completed
+    if (this.phase !== 1 && this.phase !== 2 || this.gameCompleted) return;
     
     // Deselect previous selection
     if (this.selectedCard !== null) {
@@ -119,7 +165,9 @@ class Game {
   }
   
   playCard() {
-    if (this.selectedCard === null) return;
+    if (this.selectedCard === null || this.gameCompleted) return;
+    
+    this.playSound(this.cardPlaySound);
     
     if (this.phase === 1) {
       this.playPhase1();
@@ -141,11 +189,21 @@ class Game {
     // Computer plays first card
     this.computerPhase1Card = this.ai.playFirstCard();
     
-    // Update UI
+    // Update UI with animations
     this.playerPhase1Element.textContent = this.playerPhase1Card;
     this.playerPhase1Element.className = 'card';
+    this.playerPhase1Element.classList.add('card-play-animation');
+    setTimeout(() => {
+      this.playerPhase1Element.classList.remove('card-play-animation');
+    }, 300);
+    
     this.computerHiddenPhase1.textContent = '?';
     this.computerPhase1Element.textContent = this.computerPhase1Card;
+    this.computerPhase1Element.className = 'card';
+    this.computerPhase1Element.classList.add('card-play-animation');
+    setTimeout(() => {
+      this.computerPhase1Element.classList.remove('card-play-animation');
+    }, 300);
     
     // Move to phase 2
     this.phase = 2;
@@ -167,11 +225,21 @@ class Game {
     // Computer plays second card
     this.computerPhase2Card = this.ai.playSecondCard(this.playerPhase1Card, this.computerPhase1Card);
     
-    // Update UI
+    // Update UI with animations
     this.playerPhase2Element.textContent = this.playerPhase2Card;
     this.playerPhase2Element.className = 'card';
+    this.playerPhase2Element.classList.add('card-play-animation');
+    setTimeout(() => {
+      this.playerPhase2Element.classList.remove('card-play-animation');
+    }, 300);
+    
     this.computerHiddenPhase2.textContent = '?';
     this.computerPhase2Element.textContent = this.computerPhase2Card;
+    this.computerPhase2Element.className = 'card';
+    this.computerPhase2Element.classList.add('card-play-animation');
+    setTimeout(() => {
+      this.computerPhase2Element.classList.remove('card-play-animation');
+    }, 300);
     
     // Record played cards for AI
     this.ai.recordPlayedCards(this.playerPhase1Card, this.computerPhase1Card);
@@ -190,11 +258,14 @@ class Game {
     if (playerSum > computerSum) {
       roundWinner = 'player';
       this.playerScore++;
+      this.playSound(this.winSound);
     } else if (computerSum > playerSum) {
       roundWinner = 'computer';
       this.computerScore++;
+      this.playSound(this.loseSound);
     } else {
       roundWinner = 'tie';
+      this.playSound(this.tieSound);
     }
     
     // Update AI score
@@ -229,32 +300,44 @@ class Game {
       this.resultMessage.className = 'tie';
     }
     
-    // Check for game over
-    if (this.playerScore >= 5 || this.computerScore >= 5 || this.round >= 9) {
+    // Check for game over (win condition is 5 rounds)
+    if (this.playerScore >= 5 || this.computerScore >= 5) {
+      this.gameCompleted = true;
       this.showGameOver();
     }
   }
   
   showGameOver() {
     if (this.playerScore > this.computerScore) {
-      this.resultTitle.textContent = 'You Won the Game!';
+      this.resultTitle.textContent = 'You Won the Game! 🎉';
       this.resultMessage.textContent = `Final Score: You ${this.playerScore} - ${this.computerScore} Computer`;
+      this.playSound(this.winSound);
     } else if (this.computerScore > this.playerScore) {
       this.resultTitle.textContent = 'Computer Won the Game';
       this.resultMessage.textContent = `Final Score: Computer ${this.computerScore} - ${this.playerScore} You`;
+      this.playSound(this.loseSound);
     } else {
       this.resultTitle.textContent = 'Game Tied';
       this.resultMessage.textContent = `Final Score: ${this.playerScore}-${this.computerScore}`;
+      this.playSound(this.tieSound);
     }
+    
+    // Update the modal close button text
+    this.modalCloseButton.textContent = 'New Game';
   }
   
   closeModal() {
     this.resultModal.style.display = 'none';
+    
+    // If game is completed, start a new game when modal is closed
+    if (this.gameCompleted) {
+      this.newGame();
+    }
   }
   
   nextRound() {
     this.round++;
-    if (this.round <= 9) {
+    if (this.round <= 9 && !this.gameCompleted) {
       this.resetRound();
       this.updateScoreboard();
       this.updateControls();
@@ -299,8 +382,8 @@ class Game {
   }
   
   updateControls() {
-    this.playButton.disabled = this.phase === 3 || this.selectedCard === null;
-    this.nextRoundButton.disabled = this.phase !== 3;
+    this.playButton.disabled = this.phase === 3 || this.selectedCard === null || this.gameCompleted;
+    this.nextRoundButton.disabled = this.phase !== 3 || this.gameCompleted;
   }
 }
 
