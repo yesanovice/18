@@ -59,7 +59,6 @@ class Game {
     this.rulesCloseButton.addEventListener('click', () => this.closeRules());
     this.soundButton.addEventListener('click', () => this.toggleSound());
     
-    // Card selection
     this.playerCardsElement.addEventListener('click', (e) => {
       if (e.target.classList.contains('card') && !e.target.classList.contains('empty')) {
         this.selectCard(parseInt(e.target.textContent));
@@ -85,7 +84,6 @@ class Game {
   
   playSound(sound) {
     if (!this.soundEnabled) return;
-    
     sound.currentTime = 0;
     sound.play().catch(e => console.log("Audio play failed:", e));
   }
@@ -111,13 +109,9 @@ class Game {
   }
   
   dealCards() {
-    // Create two sets of 1-9 cards
     this.playerCards = [1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9];
     this.computerCards = [1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9];
-    
-    // Initialize AI
     this.ai = new EnhancedAIPlayer();
-    
     this.renderPlayerCards();
     this.resetPlayArea();
     this.updateControls();
@@ -125,8 +119,6 @@ class Game {
   
   renderPlayerCards() {
     this.playerCardsElement.innerHTML = '';
-    
-    // Sort cards for better visibility
     const sortedCards = [...this.playerCards].sort((a, b) => a - b);
     
     sortedCards.forEach(card => {
@@ -139,10 +131,8 @@ class Game {
   }
   
   selectCard(cardValue) {
-    // Only allow selection if we're in card selection phase and game isn't completed
     if (this.phase !== 1 && this.phase !== 2 || this.gameCompleted) return;
     
-    // Deselect previous selection
     if (this.selectedCard !== null) {
       const cards = document.querySelectorAll('.player-cards .card');
       cards.forEach(card => {
@@ -152,7 +142,6 @@ class Game {
       });
     }
     
-    // Select new card
     this.selectedCard = cardValue;
     const cards = document.querySelectorAll('.player-cards .card');
     cards.forEach(card => {
@@ -166,7 +155,6 @@ class Game {
   
   playCard() {
     if (this.selectedCard === null || this.gameCompleted) return;
-    
     this.playSound(this.cardPlaySound);
     
     if (this.phase === 1) {
@@ -177,19 +165,14 @@ class Game {
   }
   
   playPhase1() {
-    // Player plays first card
     this.playerPhase1Card = this.selectedCard;
-    
-    // Remove only one instance of the selected card
     const cardIndex = this.playerCards.indexOf(this.selectedCard);
     if (cardIndex !== -1) {
       this.playerCards.splice(cardIndex, 1);
     }
     
-    // Computer plays first card
     this.computerPhase1Card = this.ai.playFirstCard();
     
-    // Update UI with animations
     this.playerPhase1Element.textContent = this.playerPhase1Card;
     this.playerPhase1Element.className = 'card';
     this.playerPhase1Element.classList.add('card-play-animation');
@@ -205,7 +188,6 @@ class Game {
       this.computerPhase1Element.classList.remove('card-play-animation');
     }, 300);
     
-    // Move to phase 2
     this.phase = 2;
     this.selectedCard = null;
     this.renderPlayerCards();
@@ -213,19 +195,14 @@ class Game {
   }
   
   playPhase2() {
-    // Player plays second card
     this.playerPhase2Card = this.selectedCard;
-    
-    // Remove only one instance of the selected card
     const cardIndex = this.playerCards.indexOf(this.selectedCard);
     if (cardIndex !== -1) {
       this.playerCards.splice(cardIndex, 1);
     }
     
-    // Computer plays second card
     this.computerPhase2Card = this.ai.playSecondCard(this.playerPhase1Card, this.computerPhase1Card);
     
-    // Update UI with animations
     this.playerPhase2Element.textContent = this.playerPhase2Card;
     this.playerPhase2Element.className = 'card';
     this.playerPhase2Element.classList.add('card-play-animation');
@@ -241,19 +218,15 @@ class Game {
       this.computerPhase2Element.classList.remove('card-play-animation');
     }, 300);
     
-    // Record played cards for AI
     this.ai.recordPlayedCards(this.playerPhase1Card, this.computerPhase1Card);
     this.ai.recordPlayedCards(this.playerPhase2Card, this.computerPhase2Card);
     
-    // Calculate sums
     const playerSum = this.playerPhase1Card + this.playerPhase2Card;
     const computerSum = this.computerPhase1Card + this.computerPhase2Card;
     
-    // Update sum display
     this.playerSumElement.textContent = playerSum;
     this.computerSumElement.textContent = computerSum;
     
-    // Determine round winner
     let roundWinner = null;
     if (playerSum > computerSum) {
       roundWinner = 'player';
@@ -268,21 +241,17 @@ class Game {
       this.playSound(this.tieSound);
     }
     
-    // Update AI score
     this.ai.updateScores(roundWinner === 'computer');
-    
-    // Show result
     this.showResult(roundWinner, playerSum, computerSum);
     
-    // Update controls for next round
-    this.phase = 3; // Waiting for next round
+    this.phase = 3;
     this.selectedCard = null;
     this.updateControls();
   }
   
   showResult(winner, playerSum, computerSum) {
     this.resultModal.style.display = 'flex';
-    
+
     if (winner === 'player') {
       this.resultTitle.textContent = 'You Won the Round!';
       this.resultTitle.className = 'win';
@@ -299,8 +268,8 @@ class Game {
       this.resultMessage.textContent = `Both sums: ${playerSum}`;
       this.resultMessage.className = 'tie';
     }
-    
-    // Check for game over (win condition is 5 rounds)
+
+    // Check if match is won (5 rounds) but don't stop the game
     if (this.playerScore >= 5 || this.computerScore >= 5) {
       this.gameCompleted = true;
       this.showGameOver();
@@ -322,14 +291,11 @@ class Game {
       this.playSound(this.tieSound);
     }
     
-    // Update the modal close button text
     this.modalCloseButton.textContent = 'New Game';
   }
   
   closeModal() {
     this.resultModal.style.display = 'none';
-    
-    // If game is completed, start a new game when modal is closed
     if (this.gameCompleted) {
       this.newGame();
     }
@@ -337,12 +303,18 @@ class Game {
   
   nextRound() {
     this.round++;
-    if (this.round <= 9 && !this.gameCompleted) {
+    if (this.round <= 9) {
       this.resetRound();
       this.updateScoreboard();
       this.updateControls();
     } else {
-      this.newGame();
+      // If all 9 rounds completed without reaching 5 wins
+      if (!this.gameCompleted) {
+        this.gameCompleted = true;
+        this.showGameOver();
+      } else {
+        this.newGame();
+      }
     }
   }
   
@@ -353,7 +325,6 @@ class Game {
     this.playerPhase2Card = null;
     this.computerPhase1Card = null;
     this.computerPhase2Card = null;
-    
     this.resetPlayArea();
     this.renderPlayerCards();
   }
@@ -382,8 +353,8 @@ class Game {
   }
   
   updateControls() {
-    this.playButton.disabled = this.phase === 3 || this.selectedCard === null || this.gameCompleted;
-    this.nextRoundButton.disabled = this.phase !== 3 || this.gameCompleted;
+    this.playButton.disabled = (this.phase === 3 || this.selectedCard === null) || this.gameCompleted;
+    this.nextRoundButton.disabled = (this.phase !== 3) || this.gameCompleted;
   }
 }
 
@@ -413,7 +384,6 @@ class EnhancedAIPlayer {
       this.opponentModel.remaining.splice(index, 1);
     }
     
-    // Also track AI's own cards
     const aiIndex = this.remainingCards.indexOf(aiCard);
     if (aiIndex !== -1) {
       this.remainingCards.splice(aiIndex, 1);
@@ -425,7 +395,6 @@ class EnhancedAIPlayer {
     const roundImportance = this.calculateRoundImportance();
     const remainingCards = [...this.remainingCards];
     
-    // Early game: play mid-range cards
     if (this.roundNumber < 3) {
       const midCards = remainingCards.filter(c => c >= 3 && c <= 7);
       if (midCards.length > 0) {
@@ -433,22 +402,18 @@ class EnhancedAIPlayer {
       }
     }
     
-    // Mid/late game: adjust based on score
     if (roundImportance > 0.7) {
-      // Important round - play stronger card
       const strongCards = remainingCards.filter(c => c >= 6);
       if (strongCards.length > 0) {
         return this.playCard(this.selectRandomCard(strongCards));
       }
     } else {
-      // Less important - conserve high cards
       const lowMidCards = remainingCards.filter(c => c <= 5);
       if (lowMidCards.length > 0) {
         return this.playCard(this.selectRandomCard(lowMidCards));
       }
     }
     
-    // Fallback
     return this.playCard(this.selectRandomCard(remainingCards));
   }
 
@@ -458,27 +423,21 @@ class EnhancedAIPlayer {
     const remainingCards = [...this.remainingCards];
     const roundImportance = this.calculateRoundImportance();
     
-    // Estimate opponent's likely second card
     const opponentCards = this.opponentModel.remaining;
     const opponentAvg = opponentCards.reduce((a, b) => a + b, 0) / opponentCards.length || 5;
     
-    // Calculate needed sum to win
-    const neededSum = currentSum + (opponentAvg + 0.5); // slight bias
+    const neededSum = currentSum + (opponentAvg + 0.5);
     
-    // Evaluate each possible card
     const cardEvaluations = remainingCards.map(card => {
       const projectedSum = currentSum + card;
       const winProbability = this.calculateWinProbability(projectedSum, opponentCards);
       
-      // Score based on win probability and card value conservation
       let score = winProbability * 100;
       
-      // Penalize using high cards unnecessarily
       if (winProbability < 0.5 && card >= 7) {
         score -= (card * 2);
       }
       
-      // Bonus for using low cards when likely to lose anyway
       if (winProbability < 0.3 && card <= 3) {
         score += (4 - card) * 10;
       }
@@ -486,10 +445,8 @@ class EnhancedAIPlayer {
       return { card, score };
     });
     
-    // Sort by best score
     cardEvaluations.sort((a, b) => b.score - a.score);
     
-    // Occasionally bluff in important rounds
     if (roundImportance > 0.8 && Math.random() < 0.3) {
       const bluffCard = this.selectBluffCard(remainingCards, cardEvaluations);
       if (bluffCard) {
@@ -497,7 +454,6 @@ class EnhancedAIPlayer {
       }
     }
     
-    // Play best card
     return this.playCard(cardEvaluations[0].card);
   }
 
@@ -506,9 +462,8 @@ class EnhancedAIPlayer {
     const diff = Math.abs(this.aiScore - this.playerScore);
     
     if (roundsLeft === 0) return 1;
-    if (diff >= roundsLeft + 1) return 0.2; // match already decided
+    if (diff >= roundsLeft + 1) return 0.2;
     
-    // Calculate how critical this round is
     const importance = 0.5 + (diff / roundsLeft) * 0.5;
     return Math.min(1, Math.max(0.2, importance));
   }
@@ -519,19 +474,15 @@ class EnhancedAIPlayer {
     let wins = 0;
     const possibleSums = opponentCards.map(oppCard => projectedSum - oppCard);
     
-    // Count how many would result in AI win
     wins = possibleSums.filter(sum => sum > 0).length;
     
-    // Add partial credit for ties
     const ties = possibleSums.filter(sum => sum === 0).length;
     
     return (wins + ties * 0.5) / possibleSums.length;
   }
 
   selectBluffCard(remainingCards, evaluations) {
-    // Try to find a card that's not the obvious best play
     if (evaluations.length > 1) {
-      // Prefer a mid-range card that's not the top evaluation
       const midCards = remainingCards.filter(c => c >= 3 && c <= 7);
       const nonTopMidCards = midCards.filter(c => c !== evaluations[0].card);
       
@@ -543,7 +494,7 @@ class EnhancedAIPlayer {
   }
 
   selectRandomCard(cardArray) {
-    if (cardArray.length === 0) return 5; // fallback
+    if (cardArray.length === 0) return 5;
     return cardArray[Math.floor(Math.random() * cardArray.length)];
   }
 
@@ -562,7 +513,6 @@ class EnhancedAIPlayer {
   }
 }
 
-// Initialize the game when the page loads
 window.addEventListener('DOMContentLoaded', () => {
   const game = new Game();
 });
